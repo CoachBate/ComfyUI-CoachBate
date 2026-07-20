@@ -1,7 +1,7 @@
 [project]
 name = "ComfyUI-CoachBate"
-description = "Shot-by-shot batch video production node for ComfyUI (LTX-2.3 workflow). Video and audio combiner. Requires ComfyUI-VideoHelperSuite for video/audio combine features."
-version = "0.2.1"
+description = "Alpha-stage, personal quality-of-life nodes for ComfyUI. Highlights: Workflows+, a fast sidebar panel that searches workflow names AND contents (tested with ~8,000 workflows) and can move/rename/delete files and folders; a Model Path Auto-Fix that resolves models/LoRAs saved under different folder names via configurable overrides; and Text Preview and Edit, an editable pass-through node whose resolved value is saved into the workflow's metadata. See README for the full node list."
+version = "0.2.2"
 license = { file = "LICENSE" }
 dependencies = []
 

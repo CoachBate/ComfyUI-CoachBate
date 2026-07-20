@@ -1,16 +1,32 @@
 # comfyui-coachbate
 
-A collection of ComfyUI custom nodes built primarily for CoachBate's own production use. Mostly
-quality-of-life tooling — workflow management, batch queuing, and text utilities — with some
-experimental LTX Video work alongside. Should run on any standard ComfyUI setup.
+Quality-of-life ComfyUI nodes built primarily for CoachBate's own production use — **alpha
+stage**, use at your own risk. Should run on any standard ComfyUI setup.
+
+Highlights:
+- **Workflows+** — a fast sidebar panel for searching workflows by name *and* by contents, with
+  move/rename/delete for both files and folders. Tested against a library of nearly 8,000
+  workflows across folders and subfolders.
+- **Workflow Model Path Auto-Fix** — finds models and LoRAs saved under folder names that don't
+  match your local setup and fixes the widget automatically. A configurable override list lets
+  you redirect specific files, e.g. swapping an fp8 model for an int8 convRot build.
+- **CoachBate Text Preview and Edit** — connect a string to its `any` input; if the upstream
+  node is muted, it falls back to whatever you've typed in instead (hence "Edit"). Unlike
+  similar preview nodes, that resolved value is saved into the workflow's own metadata, so
+  reopening a saved image or video later shows exactly which dynamically generated prompt
+  was used.
 
 ---
 
 ## Installation
 
+Available in **ComfyUI Manager** — search for "CoachBate".
+
+Or install manually:
+
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/MarcBate/ComfyUI-CoachBate
+git clone https://github.com/CoachBate/ComfyUI-CoachBate.git
 ```
 
 Restart ComfyUI. Nodes appear under **CoachBate** in the Add Node menu.
@@ -283,6 +299,30 @@ day-to-day use of the stock Workflows tab.
 
 No other configuration needed — the tab appears automatically once the pack
 is installed.
+
+---
+
+## Workflow Model Path Auto-Fix
+
+A frontend extension (`web/js/workflowModelPathAutoFix.js`) that runs automatically whenever a
+workflow loads. Model/LoRA widgets often reference a filename that lives in a different folder,
+or under a slightly different name, than the one on your machine — the same workflow shared
+between two ComfyUI setups can point at paths that only exist on the original author's machine.
+This extension checks every model-type widget against your local model folders and, if the exact
+file isn't found, rewrites the widget to the best match it can resolve — so the workflow loads
+pointing at a file that actually exists, instead of showing a blank/invalid widget.
+
+- **Override rules** — `workflow_path_autofix_overrides.txt`, in the package root, is an ordered
+  list of `search<TAB>replacement` rules (one per line; blank lines and lines starting with `#`
+  are ignored). Rules are applied first-match-wins, then validated against that widget's actual
+  local choices, so a rule that doesn't resolve to a real file is simply skipped. Use this to
+  redirect specific files on purpose — e.g. always substituting an `int8_convrot` transformer
+  build for the `fp8_scaled` one a workflow was authored with, or mapping an old folder layout
+  (`LTXVideo\v2\...`) to a new one.
+- **Disabling it** — open ComfyUI's **Settings → Extension**, filter for
+  `CoachBate.WorkflowModelPathAutoFix`, and turn it off if you'd rather leave paths untouched.
+- Every replacement it makes is logged server-side (`POST /coachbate/workflow_path_autofix/log`)
+  so you can see what changed on load.
 
 ---
 
