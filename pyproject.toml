@@ -1,0 +1,14 @@
+[project]
+name = "ComfyUI-CoachBate"
+description = "Shot-by-shot batch video production node for ComfyUI (LTX-2.3 workflow). Video and audio combiner. Requires ComfyUI-VideoHelperSuite for video/audio combine features."
+version = "0.2.0"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/CoachBate/ComfyUI-CoachBate"
+
+[tool.comfy]
+PublisherId  = "CoachBate"
+DisplayName  = "CoachBate"
+Icon         = ""

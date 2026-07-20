@@ -1,0 +1,9 @@
+/.claude/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Local marker file that enables the WIP LTX Director/FreeFuse nodes.
+# Not part of the public release — see CLAUDE.md.
+/.coachbate_enable_ltx
