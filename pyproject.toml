@@ -9,6 +9,6 @@ dependencies = []
 Repository = "https://github.com/CoachBate/ComfyUI-CoachBate"
 
 [tool.comfy]
-PublisherId  = "CoachBate"
+PublisherId  = "coachbate"
 DisplayName  = "CoachBate"
 Icon         = ""

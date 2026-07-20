@@ -49,7 +49,8 @@ def ok(msg):  print(f"  [PASS]  {msg}")
 def fail(msg, exc=None):
     print(f"  [FAIL]  {msg}")
     if exc:
-        import traceback; traceback.print_exc()
+        import traceback
+        traceback.print_exc()
 
 def section(title):
     print(f"\n{'='*60}\n  {title}\n{'='*60}")
@@ -461,7 +462,8 @@ if __name__ == "__main__":
     except Exception as e:
         fail("STAGE 1 FAILED", e)
         failed += 1
-        import traceback; traceback.print_exc()
+        import traceback
+        traceback.print_exc()
 
     if args.full:
         try:
@@ -470,7 +472,8 @@ if __name__ == "__main__":
         except Exception as e:
             fail("STAGE 2 FAILED", e)
             failed += 1
-            import traceback; traceback.print_exc()
+            import traceback
+            traceback.print_exc()
     else:
         print("  (Skipping Stage 2 — run with --full to test real model)")
 
