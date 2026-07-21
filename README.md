@@ -6,7 +6,7 @@ stage**, use at your own risk. Should run on any standard ComfyUI setup.
 Highlights:
 - **Workflows+** — a fast sidebar panel for searching workflows by name *and* by contents, with
   move/rename/delete for both files and folders. Tested against a library of nearly 8,000
-  workflows across folders and subfolders.
+  workflows across folders and subfolders. **Drag and drop** your json, audio, image, of video files here and it will open any embedded workflow like it used to
 - **Workflow Model Path Auto-Fix** — finds models and LoRAs saved under folder names that don't
   match your local setup and fixes the widget automatically. A configurable override list lets
   you redirect specific files, e.g. swapping an fp8 model for an int8 convRot build.
@@ -35,25 +35,17 @@ Restart ComfyUI. Nodes appear under **CoachBate** in the Add Node menu.
 
 ## Nodes
 
-| Node | Description |
-|------|-------------|
-| [Workflows+](#workflows-sidebar-panel) | Fast virtualized replacement for the built-in Workflows sidebar — search, sort, pin, manage thousands of workflow files without the browser hanging |
-| [Batch Prompter](#coachbate-batch-prompter) | Queue one job per prompt line from a multiline text block — all at once, one at a time, or in random order |
-| [Text Preview and Edit](#coachbate-text-preview-and-edit) | Editable text node that also displays and passes through any connected value |
-| [Numbered Text](#coachbate-numbered-text) | Multiline text input with a line-number gutter; passes the full text as a STRING |
-| [Video Combine](#coachbate-video-combine) | VHS Video Combine wrapper that strips API keys from video metadata before saving |
-| [Strip API Key Metadata](#coachbate-strip-api-key-metadata) | Removes API key fields from video metadata |
-| [Load Videos With Audio](#coachbate-load-videos-with-audio) | Loads video + audio pairs for use in workflows |
-| [Audio Schedule](#coachbate-audio-schedule) | Schedules audio segments to timeline frame positions |
-| [Lyrics JSON Parser](#coachbate-lyrics-json-parser) | Parses a lyrics/timing JSON for audio-sync workflows |
-| [LTX Director](#ltx-director) | Full timeline editor for image and audio segments in LTX Video (forked from WhatDreamsCost) |
-| [LTX Director Guide](#ltx-director-guide) | Guide frame node for use with LTX Director |
-| [LTX Trim Latent](#ltx-trim-latent) | Latent trimming with `audio_latent_length` output |
-| [LTX LoRA Loader ⚗️](#ltx-freefuse-experimental) | *Experimental* — loads a character LoRA in masked-bypass mode for FreeFuse spatial separation |
-| [LTX Concept Map ⚗️](#ltx-freefuse-experimental) | *Experimental* — maps adapter names to concept text and locates Gemma3 token positions |
-| [LTX Phase 1 Sampler ⚗️](#ltx-freefuse-experimental) | *Experimental* — short sampling pass that collects attention and generates spatial masks |
-| [LTX Mask Applicator ⚗️](#ltx-freefuse-experimental) | *Experimental* — applies Phase 1 masks to the bypass LoRA hooks before the main sample |
-| [Shot Loader](#coachbate-shot-loader) | Drives a `shotlist.json` through Auto Queue one shot per run |
+| Node                                                        | Description                                                                                                                                                                                                                        |
+|-------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Workflows+](#workflows-sidebar-panel)                      | Fast virtualized replacement for the built-in Workflows sidebar — search, sort, pin, manage thousands of workflow files without the browser hanging. Drag and drop files onto the workflows+ panel to open their embedded workflow |
+| [Batch Prompter](#coachbate-batch-prompter)                 | Queue one job per prompt line from a multiline text block — all at once, one at a time, or in random order                                                                                                                         |
+| [Text Preview and Edit](#coachbate-text-preview-and-edit)   | Editable text node that also displays and passes through any connected value                                                                                                                                                       |
+| [Numbered Text](#coachbate-numbered-text)                   | Multiline text input with a line-number gutter; passes the full text as a STRING                                                                                                                                                   |
+| [Video Combine](#coachbate-video-combine)                   | VHS Video Combine wrapper that strips API keys from video metadata before saving                                                                                                                                                   |
+| [Strip API Key Metadata](#coachbate-strip-api-key-metadata) | Removes API key fields from video metadata                                                                                                                                                                                         |
+| [Load Videos With Audio](#coachbate-load-videos-with-audio) | Load all the videos in a folder including their audio so they can be edited or saved to new video.                                                                                                                                 |
+| [Lyrics JSON Parser](#coachbate-lyrics-json-parser)         | Parses a custom json format for lyrics/timing that an LLM creates                                                                                                                                                                  |
+| [Shot Loader](#coachbate-shot-loader)                       | Drives a `shotlist.json` through Auto Queue one shot per run                                                                                                                                                                       |
 
 ---
 
@@ -134,7 +126,7 @@ Or wrapped:
 
 ```json
 {
-  "shots": [ ... ]
+  "shots": [ "..." ]
 }
 ```
 

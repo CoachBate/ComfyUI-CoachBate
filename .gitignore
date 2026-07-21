@@ -7,3 +7,6 @@ __pycache__/
 # Local marker file that enables the WIP LTX Director/FreeFuse nodes.
 # Not part of the public release — see CLAUDE.md.
 /.coachbate_enable_ltx
+
+# Local helper that publishes master to the public CoachBate repo — see CLAUDE.md.
+/publish-public.sh

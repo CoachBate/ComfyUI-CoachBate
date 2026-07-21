@@ -141,6 +141,52 @@ fresh session started blind and rebuilt the wrong thing. To avoid a repeat:
    A fresh session trusts this table to orient itself; if it lies, the session
    builds the wrong thing.
 
+## Publishing to the public repo / Comfy Registry
+
+This directory (`C:\Data\...\ComfyUI-CoachBate`) is the **only** working copy — there is no
+separate clone anywhere. The public repo, `github.com/CoachBate/ComfyUI-CoachBate`, is reached
+via a second git remote and a dedicated local branch, both inside this same repo:
+
+- `origin` → `github.com/MarcBate/ComfyUI-CoachBate` — private, real identity, full history.
+  `master` is developed and committed here as normal.
+- `public` → `github.com/CoachBate/ComfyUI-CoachBate` — the public registry-listed repo, pushed
+  to under the `CoachBate` pseudonym (see the identity note in the LTX section above — same
+  reasoning: `CoachBate` should not be linkable to Marc's real GitHub identity).
+- `public-release` — a local branch tracking `public/master`. Its commit history is **unrelated**
+  to `master`'s (different root commit, all authors `CoachBate <coachbate@users.noreply.github.com>`)
+  — the two branches coexist in one repo without their histories ever merging.
+
+Two credential-related local git configs make pushing to both remotes work without the accounts
+colliding (Git Credential Manager otherwise caches one credential per **host**, not per account):
+- `credential.useHttpPath = true` — makes GCM key credentials by full URL instead of just
+  `github.com`.
+- `credential.https://github.com/MarcBate/ComfyUI-CoachBate.username = MarcBate` and the matching
+  `.../CoachBate/ComfyUI-CoachBate.username = CoachBate` — pins each remote to the right account
+  so GCM doesn't need to guess (or use a stale global default) when prompting.
+
+**To publish an update:**
+1. Finish and commit your change on `master` as normal (real identity, full history — nothing
+   special here).
+2. Bump `version` in `pyproject.toml` — the Comfy Registry rejects re-publishing an existing
+   version, and pushing to `public/master` auto-triggers `.github/workflows/publish.yml`.
+3. Run `./publish-public.sh "Release message"` from the repo root. It refuses to run unless
+   `master` is clean, switches to `public-release`, uses `git read-tree -u --reset master` to make
+   the working tree exactly match `master`'s current tracked files (this also removes anything
+   `public-release` had that `master` no longer does — a plain `checkout master -- .` would not),
+   shows you the diff, asks for confirmation, commits with the `CoachBate` identity (via `git -c
+   user.name=... -c user.email=...`, not a repo-wide config — `master` commits must never be
+   relabeled), pushes to `public/master`, and switches back to `master`.
+4. Check the **Actions** tab on the public repo for the "Publish to Comfy registry" run.
+
+`publish-public.sh` itself is gitignored (`/publish-public.sh`) and only exists locally — it's a
+convenience wrapper, not part of either published tree. `.coachbate_enable_ltx` stays gitignored
+on both branches too, so the LTX-enable marker can never leak into a publish.
+
+⚠️ Any file edited directly on `public-release` (or any uncommitted edit made right before
+switching branches) can be silently discarded by `read-tree --reset` on the next publish, since it
+resets to `master`'s last **committed** tree, not the working tree. Always commit on `master`
+first, then run the script.
+
 ## shotlist.json format
 ```json
 [
