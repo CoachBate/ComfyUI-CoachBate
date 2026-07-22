@@ -119,6 +119,51 @@ function _restoreSeqStart(node) {
     }
 }
 
+// ── Disable ComfyUI's native Auto Queue (best-effort across UI versions) ────
+// Mirrors coachBateShotLoader.js's disableAutoQueue(). Needed because
+// CoachBateBatchPrompter.IS_CHANGED always returns time.time() (so the
+// workflow is permanently "changed" from ComfyUI's point of view) — if the
+// user separately has the native Auto Queue toggle on, clearing/interrupting
+// the queue alone does NOT stop it: native Auto Queue sees an empty queue
+// plus a changed workflow and immediately re-fires a new run on its own,
+// completely bypassing our own _cb_autoqueue flag (which only gates OUR
+// self-advance timer). That is what made Stop appear to do nothing in
+// sequential mode when native Auto Queue was also enabled.
+function _disableNativeAutoQueue() {
+    try {
+        const stores = window.__pinia?.state?.value;
+        if (stores?.queue) {
+            stores.queue.autoQueueMode = "disabled";
+            return true;
+        }
+    } catch (_) {}
+
+    try {
+        if (app.ui?.autoQueueMode !== undefined) {
+            app.ui.autoQueueMode = "disabled";
+            return true;
+        }
+    } catch (_) {}
+
+    try {
+        const sel =
+            document.querySelector("select.auto-queue-mode") ??
+            document.querySelector("[data-id='autoQueueMode']") ??
+            document.querySelector(".comfy-settings-dialog select") ??
+            [...document.querySelectorAll("select")].find(
+                el => el.textContent.toLowerCase().includes("auto") ||
+                      el.id.toLowerCase().includes("auto")
+            );
+        if (sel) {
+            sel.value = "disabled";
+            sel.dispatchEvent(new Event("change", { bubbles: true }));
+            return true;
+        }
+    } catch (_) {}
+
+    return false;
+}
+
 // ── Shared stop helper ────────────────────────────────────────────────────────
 async function _stopBatch(node) {
     try {
@@ -132,6 +177,7 @@ async function _stopBatch(node) {
         _cancelSeqTimer(node);
         _restoreSeqStart(node);
         node._cb_autoqueue    = false;
+        const autoOff = _disableNativeAutoQueue();
         node._cb_display      = "Batch stopped by user.";
         node._cb_remaining    = 0;
         node._cb_is_last      = true;
@@ -141,8 +187,10 @@ async function _stopBatch(node) {
         app.extensionManager?.toast?.add({
             severity: "warn",
             summary:  "CoachBate Batch Prompter",
-            detail:   "Queue cleared and current job interrupted.",
-            life:     4000,
+            detail:   autoOff
+                ? "Queue cleared, current job interrupted, auto-queue disabled."
+                : "Queue cleared and current job interrupted. If ComfyUI's native Auto Queue is on, disable it manually too.",
+            life:     5000,
         });
     } catch (err) {
         console.error("[CoachBate] BatchPrompter stop failed:", err);
@@ -982,6 +1030,17 @@ app.registerExtension({
 
             } else {
                 // ── Sequential mode (queue_all_at_once = false) ──────────────
+                // Guard: only a manual sequential Run sets _cb_seq_active (see
+                // the queuePrompt patch). If we reach here without it, this is
+                // NOT a real sequential run — it's a bulk-queue job whose
+                // onExecuted arrived after _cb_total_queued was cleared out
+                // from under us (an execution error / interrupt mid-batch nulls
+                // it, and the remaining already-queued jobs then fall into this
+                // branch). Doing the self-advance below would re-enable
+                // _cb_autoqueue and, in queue_all mode, re-post the ENTIRE
+                // batch. Bail out and leave the stopped/error display intact.
+                if (!this._cb_seq_active) return;
+
                 // Re-enable self-advance on every successful execution so that
                 // pressing Queue manually always (re)starts the sequence, same
                 // as ShotLoader does with _coachbate_autoqueue.
