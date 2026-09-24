@@ -1,0 +1,14 @@
+[project]
+name = "ComfyUI-CoachBate"
+description = "Quality-of-life nodes for big ComfyUI libraries and batch production runs. Workflows+ replaces the workflows sidebar with a virtualized browser that stays fast at 8,000+ files — search by name or by what's inside the JSON, then pin, rename, move, duplicate or trash workflows and whole folders without leaving the panel. Batch Prompter turns any list into a batch, queueing one run per line of a text block: prompts, filenames, LoRA names, seed labels. Model Path Auto-Fix repoints models and LoRAs saved under folder names your install doesn't use, with an override list for renamed or requantized files. Also included: a streaming TensorRT upscale + FILM interpolation node that encodes long videos in bounded RAM, and Text Preview and Edit, which writes the resolved prompt into your output's metadata so you can read it back later. See the README for the full node list."
+version = "0.2.9"
+license = { file = "LICENSE" }
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/CoachBate/ComfyUI-CoachBate"
+
+[tool.comfy]
+PublisherId  = "coachbate"
+DisplayName  = "CoachBate"
+Icon         = ""

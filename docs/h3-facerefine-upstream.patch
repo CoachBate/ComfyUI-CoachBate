@@ -1,0 +1,133 @@
+diff --git a/nodes.py b/nodes.py
+index fae437e..00b38fe 100644
+--- a/nodes.py
++++ b/nodes.py
+@@ -35,7 +35,17 @@ def _detector_list() -> list[str]:
+ 
+ def _load_detector(name: str):
+     if name in _DETECTOR_CACHE:
+-        return _DETECTOR_CACHE[name]
++        # Keep the weights, drop the predictor. ultralytics builds a predictor on the
++        # first predict() and reuses it for the life of the object; observed in a
++        # long-running server: after earlier (interrupted) runs the reused predictor
++        # silently returned almost no detections on frames a fresh object scored at
++        # 0.9. Rebuilding it costs ~0.1 s per node execution.
++        _m = _DETECTOR_CACHE[name]
++        try:
++            _m.predictor = None
++        except Exception:
++            pass
++        return _m
+     path = None
+     for key in ("ultralytics_bbox", "ultralytics"):
+         try:
+@@ -1245,6 +1255,14 @@ class H3FaceTrackCrop:
+                                "The face found there is followed forwards and backwards "
+                                "through its shot, so pick a frame where the subject is clearly "
+                                "visible rather than one the detector may miss them on."}),
++                "crop_size_from": (["height", "longest_side"], {
++                    "default": "height",
++                    "tooltip": "What the crop is sized from. 'height' (default) is the face "
++                               "behaviour: crop side = crop_factor x box HEIGHT, which suits a "
++                               "roughly square subject. 'longest_side' uses the larger of the "
++                               "box's smoothed height and width, for subjects that can be much "
++                               "wider than tall (a hand, a horizontal body part) - with 'height' "
++                               "those are cut off at the sides of the crop."}),
+                 "face_pick": ("H3FACEPICK", {
+                     "tooltip": "The subject chosen upstream by H3 Load Video + Face Select.\n"
+                                "Decides who to follow, per shot, and carries the boxes and "
+@@ -1277,7 +1295,8 @@ class H3FaceTrackCrop:
+             identity_reference=None, identity_threshold=0.28, identity_track=True,
+             select_index=0, identity_model="insightface",
+             identity_clip_vision=None, cut_detection="none", cut_threshold=3.0,
+-            absent_shots="off", X=0, Y=0, frame_index=0, face_pick=None):
++            absent_shots="off", X=0, Y=0, frame_index=0, face_pick=None,
++            crop_size_from="height"):
+         # Loaded on demand: with a face_pick the clip is never detected here, and the
+         # insightface backend brings its own, so a run can finish without this file.
+         _model_box = []
+@@ -1761,6 +1780,11 @@ class H3FaceTrackCrop:
+             sz[absent] = _sz
+             sm_fw[absent] = _fw
+ 
++        # What the crop is sized from. Faces are near-square, so height alone works
++        # and is more stable as the head turns; a subject that can lie sideways is
++        # wider than tall and would be clipped by a height-only crop.
++        crop_basis = np.maximum(sz, sm_fw) if crop_size_from == "longest_side" else sz
++
+         # frame-to-frame movement, before vs after: the number that corresponds to
+         # visible jitter. Residual is what still moves after smoothing.
+         def _jit(a):
+@@ -1774,7 +1798,7 @@ class H3FaceTrackCrop:
+         # crop is (largest smoothed face height) * crop_factor, clamped to the frame; matching
+         # the canvas to it keeps magnification >= 1.0x everywhere.
+         if canvas_mode != "manual":
+-            need = float(min(sz.max() * crop_factor, H))
++            need = float(min(crop_basis.max() * crop_factor, H))
+             snapped = int(np.ceil(need / 32.0) * 32)
+             if canvas_mode == "auto_capped_768":
+                 snapped = min(snapped, 768)
+@@ -1826,7 +1850,7 @@ class H3FaceTrackCrop:
+         preview = images[..., :3].clone()
+ 
+         for k, i in enumerate(kept):
+-            bh = sz[i] * crop_factor
++            bh = crop_basis[i] * crop_factor
+             bw = bh * aspect
+             # keep aspect while fitting inside the frame
+             if bw > W:
+@@ -2397,6 +2421,23 @@ class H3InjectVideoLatent:
+         members = list(samples.unbind())
+         video_tmpl = members[0]
+ 
++        # Pad the PIXEL frames up to the AV latent's length before encoding. H3's video
++        # VAE maps 17k+5 frames -> 5k+2 latents and TRUNCATES an off-grid tail (26 frames
++        # encode like 22), so on a 264-frame clip frames 261-264 were never encoded and
++        # the latent then had to be padded - with reference content, or a copied latent
++        # frame, either of which the sampler turned into a different scene that the
++        # stitch pasted onto the last real frames. Repeating the last real frame here
++        # gives the VAE a genuine freeze to encode instead; the stitch drops the extra.
++        pix_pad_note = ""
++        _tmpl_t = video_tmpl.shape[-3]
++        _need = (max(int(_tmpl_t) - 2, 0) // 5) * 17 + 5
++        if images.shape[0] < _need:
++            _n = _need - images.shape[0]
++            images = torch.cat([images, images[-1:].expand(_n, *images.shape[1:])], dim=0)
++            pix_pad_note = (f"  padded {_n} frame(s) by repeating the last frame to reach "
++                            f"H3's grid ({_need}) before encoding\n")
++        if pix_pad_note:
++            print("[H3FaceRefine] " + pix_pad_note.strip())
+         encoded = vae.encode(images[..., :3])
+         if encoded.ndim == 4:  # [B,C,H,W] -> [1,C,T,H,W]
+             encoded = encoded.unsqueeze(0).movedim(1, 2)
+@@ -2416,11 +2457,18 @@ class H3InjectVideoLatent:
+             if got_t > tgt_t:
+                 encoded = encoded[..., :tgt_t, :, :]
+             else:
+-                pad = video_tmpl[..., : tgt_t - got_t, :, :].to(encoded.device, encoded.dtype)
++                # Pad by HOLDING the last real latent frame, not with the template's
++                # reference/empty content. The padding is discarded on stitch, but H3's
++                # temporal attention lets the pad frames influence the real frames next
++                # to them: reference content there bled a different scene into the
++                # tail of every off-grid clip. A frozen last frame is benign.
++                n_pad = tgt_t - got_t
++                pad = encoded[..., -1:, :, :].expand(
++                    *encoded.shape[:-3], n_pad, *encoded.shape[-2:]).to(encoded.device, encoded.dtype)
+                 encoded = torch.cat([encoded, pad], dim=-3)
+             note = (f"  WARNING temporal mismatch: encoded t={got_t} vs latent t={tgt_t} "
+-                    f"-> {'trimmed' if got_t > tgt_t else 'padded'}. Frame count is probably "
+-                    f"off H3's 17k+5 grid.\n")
++                    f"-> {'trimmed' if got_t > tgt_t else 'padded by holding the last frame'}. "
++                    f"Frame count is probably off H3's 17k+5 grid.\n")
+ 
+         members[0] = encoded.to(video_tmpl.device, video_tmpl.dtype)
+         out = dict(av_latent)
+@@ -2428,7 +2476,7 @@ class H3InjectVideoLatent:
+ 
+         report = (
+             f"injected video latent {tuple(encoded.shape)} into AV latent "
+-            f"(streams={len(members)})\n{note}"
++            f"(streams={len(members)})\n{pix_pad_note}{note}"
+             f"frames_in={images.shape[0]}  {images.shape[2]}x{images.shape[1]}px"
+         )
+         return (out, report)

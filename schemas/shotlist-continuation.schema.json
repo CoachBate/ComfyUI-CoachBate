@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CoachBate Shotlist Continuation Fields",
+  "description": "Additive contract. Existing shot and reference fields remain allowed. Workflow owns output paths.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "shot_id": {"type": "string", "minLength": 1},
+      "video_continuation": {"type": "boolean", "default": false},
+      "hard_frame_anchors": {"type": "boolean", "default": false},
+      "continuation_source_shot_id": {"type": "string"},
+      "continuation_context_frames": {"type": "integer", "minimum": 39, "default": 39},
+      "manual_input_required": {"type": "boolean", "default": false},
+      "reference_video_1": {"type": "string", "default": ""},
+      "reference_video_2": {"type": "string", "default": ""},
+      "reference_video_3": {"type": "string", "default": ""},
+      "reference_video_1_settings": {"$ref": "#/$defs/videoSettings"},
+      "reference_video_2_settings": {"$ref": "#/$defs/videoSettings"},
+      "reference_video_3_settings": {"$ref": "#/$defs/videoSettings"},
+      "h3_ref_video_1": {"type": "string"},
+      "h3_ref_video_2": {"type": "string"},
+      "h3_ref_video_3": {"type": "string"},
+      "h3_reference_videos": {"type": "array", "maxItems": 3, "items": {"type": "string"}},
+      "output_audio_tail": {
+        "type": "object", "additionalProperties": false,
+        "required": ["keep_seconds", "silence_seconds", "sample_rate", "channels"],
+        "properties": {
+          "keep_seconds": {"type": "number", "exclusiveMinimum": 0},
+          "silence_seconds": {"type": "number", "exclusiveMinimum": 0},
+          "sample_rate": {"type": "integer", "minimum": 1},
+          "channels": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "allOf": [{
+      "if": {"required": ["video_continuation"], "properties": {"video_continuation": {"const": true}}},
+      "then": {"required": ["continuation_source_shot_id"], "properties": {"continuation_source_shot_id": {"minLength": 1}}}
+    }]
+  },
+  "$defs": {
+    "videoSettings": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "force_rate": {"type": "number", "minimum": 0, "maximum": 60, "default": 24},
+        "custom_width": {"type": "integer", "minimum": 0, "default": 0},
+        "custom_height": {"type": "integer", "minimum": 0, "default": 0},
+        "frame_load_cap": {"type": "integer", "minimum": 0, "default": 0},
+        "skip_first_frames": {"type": "integer", "minimum": 0, "default": 0},
+        "select_every_nth": {"type": "integer", "minimum": 1, "default": 1},
+        "format": {"type": "string", "minLength": 1, "default": "None"},
+        "include_audio": {"type": "boolean", "default": false}
+      }
+    }
+  }
+}

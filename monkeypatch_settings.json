@@ -1,0 +1,7 @@
+{
+  "vhs_video_combine": true,
+  "gemma_env_key": true,
+  "whisper_dtype": true,
+  "vhs_preview_loop": true,
+  "h3_facerefine": false
+}
